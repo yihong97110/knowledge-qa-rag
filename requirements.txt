@@ -1,0 +1,36 @@
+# ============================
+# 企业技术文档智能问答系统 - 依赖清单
+# ============================
+# 安装: pip install -r requirements.txt
+
+# --- Web 框架 ---
+fastapi>=0.108.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6          # FastAPI 文件上传依赖
+
+# --- LLM / Embedding API ---
+openai>=1.12.0                   # DashScope 兼容模式调用 LLM + Embedding
+
+# --- 向量数据库 ---
+pymilvus>=2.4.0                  # Milvus Lite 嵌入式模式，无需 Docker
+
+# --- 知识图谱 ---
+neo4j>=5.15.0                    # Neo4j Python driver
+
+# --- 文档数据库 ---
+pymongo>=4.6.0                   # MongoDB 会话历史（可选，降级内存）
+
+# --- 工作流编排 ---
+# LangGraph 1.x 为 LTS 版本（semver 稳定，维护至 2.0 发布）；
+# 与 jiuan-lite requirements-agent.txt 声明的 langchain>=1.0 生态对齐。
+# 代码入口写法已适配为 add_edge(START, ...)（0.2.x 同样兼容）。
+langgraph>=1.0,<2.0              # StateGraph 双流程编排
+
+# --- 检索 ---
+rank-bm25>=0.2.2                 # BM25 稀疏检索（纯 Python，无需 GPU）
+
+# --- PDF 解析 ---
+pdfplumber>=0.10.0               # PDF 文本提取（首选）
+
+# --- 配置 ---
+python-dotenv>=1.0.0             # .env 文件加载

@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识图谱 - 企业技术文档智能问答系统</title>
+    <style>
+        :root {
+            --ink: #172026;
+            --ink-2: #3f4a52;
+            --muted: #71808c;
+            --line: #d9e0e6;
+            --line-strong: #c7d0d8;
+            --paper: #f7f8f6;
+            --surface: #fffdf8;
+            --surface-2: #f0f3f4;
+            --cobalt: #2457d6;
+            --cobalt-2: #183f9c;
+            --teal: #0d8b7f;
+            --amber: #b7791f;
+            --danger: #c2413b;
+            --radius: 8px;
+            --shadow: 0 1px 2px rgba(23, 32, 38, .06), 0 10px 30px rgba(23, 32, 38, .07);
+            --shadow-soft: 0 1px 2px rgba(23, 32, 38, .05);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--ink);
+            background: #eef3f8;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ---- 顶部导航 ---- */
+        .navbar {
+            background: rgba(255, 253, 248, .95);
+            backdrop-filter: blur(16px);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--line);
+            box-shadow: 0 1px 0 rgba(23, 32, 38, .04);
+            flex-shrink: 0;
+        }
+        .navbar h1 { font-size: 18px; font-weight: 760; color: var(--ink); letter-spacing: 0; }
+        .navbar a {
+            color: var(--ink-2);
+            text-decoration: none;
+            padding: 8px 20px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 550;
+            white-space: nowrap;
+            transition: color .18s ease, background-color .18s ease;
+        }
+        .navbar a:hover { color: var(--cobalt); background: rgba(36, 87, 214, .07); }
+        .navbar a.active { color: var(--cobalt); background: rgba(36, 87, 214, .1); font-weight: 650; }
+
+        /* ---- 三栏 grid 布局 ---- */
+        .kg-shell {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 310px minmax(0, 1fr) 320px;
+            min-height: 0;
+            background:
+                linear-gradient(180deg, rgba(247, 250, 252, .96), rgba(237, 242, 247, .96)),
+                radial-gradient(circle at 18% 12%, rgba(36, 87, 214, .08), transparent 32%);
+        }
+
+        /* ---- 左侧面板 ---- */
+        .kg-panel-left {
+            border-right: 1px solid var(--line);
+            background: rgba(255, 253, 248, .96);
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+        .kg-panel-header {
+            padding: 22px 20px 16px;
+            border-bottom: 1px solid var(--line);
+        }
+        .kg-panel-header .kicker {
+            color: var(--muted);
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        .kg-panel-header h2 { margin: 4px 0; color: var(--ink); font-size: 1.2rem; font-weight: 760; }
+        .kg-panel-header p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.55; }
+
+        .kg-section { padding: 18px 20px; border-bottom: 1px solid #e2e8f0; }
+        .kg-section h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--ink); font-size: .92rem; font-weight: 720; }
+        .kg-section label { font-size: .78rem; color: var(--muted); display: block; margin-bottom: 4px; }
+        .kg-section select, .kg-section input {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: var(--radius);
+            background: #fff;
+            color: var(--ink);
+            font-size: .9rem;
+            margin-bottom: 8px;
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+        .kg-section select:focus, .kg-section input:focus {
+            outline: none;
+            border-color: var(--cobalt);
+            box-shadow: 0 0 0 3px rgba(36, 87, 214, .14);
+        }
+
+        .kg-btn-row { display: flex; gap: 8px; }
+        .kg-btn {
+            border: 1px solid #cbd5e1;
+            border-radius: var(--radius);
+            background: #f8fafc;
+            color: #334155;
+            padding: 8px 16px;
+            font-size: .86rem;
+            font-weight: 650;
+            cursor: pointer;
+            flex: 1;
+            transition: all .16s ease;
+        }
+        .kg-btn:hover { background: #eaf1fb; border-color: rgba(36, 87, 214, .32); color: var(--cobalt); transform: translateY(-1px); }
+
+        /* 图例 */
+        .kg-legend { display: flex; flex-wrap: wrap; gap: 6px; }
+        .kg-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: .78rem;
+            color: #475569;
+            padding: 3px 10px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 253, 248, .8);
+        }
+        .kg-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+        /* ---- 中间画布 ---- */
+        .kg-stage { position: relative; min-width: 0; overflow: hidden; }
+
+        /* 浮动工具栏 */
+        .kg-toolbar {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            right: 18px;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .kg-toolbar > * { pointer-events: auto; }
+
+        .kg-search {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 260px;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 253, 248, .9);
+            box-shadow: 0 1px 2px rgba(23, 32, 38, .05);
+        }
+        .kg-search input {
+            flex: 1;
+            height: 38px;
+            border: 0;
+            background: transparent;
+            color: var(--ink);
+            font-size: .9rem;
+            outline: none;
+        }
+        .kg-search input::placeholder { color: #94a3b8; }
+
+        .kg-toolbar select, .kg-toolbar .kg-tool-btn {
+            height: 38px;
+            padding: 0 14px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 253, 248, .9);
+            color: #475569;
+            font-size: .86rem;
+            font-weight: 550;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(23, 32, 38, .05);
+            backdrop-filter: blur(12px);
+            transition: all .16s ease;
+        }
+        .kg-toolbar select:hover, .kg-toolbar .kg-tool-btn:hover {
+            background: #eaf1fb;
+            border-color: rgba(36, 87, 214, .32);
+            color: var(--cobalt);
+        }
+
+        /* 浮动统计 */
+        .kg-stats {
+            position: absolute;
+            left: 18px;
+            bottom: 18px;
+            z-index: 5;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: .82rem;
+            color: #64748b;
+        }
+        .kg-stats span {
+            padding: 6px 10px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 253, 248, .9);
+            box-shadow: 0 1px 2px rgba(23, 32, 38, .05);
+        }
+        .kg-stats strong { color: var(--cobalt); font-weight: 700; }
+
+        /* 画布容器 - 带网格线背景 */
+        #graph-canvas {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at center, rgba(36, 87, 214, .08), transparent 42%),
+                linear-gradient(rgba(148, 163, 184, .16) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, .16) 1px, transparent 1px),
+                #f8fbff;
+            background-size: auto, 34px 34px, 34px 34px, auto;
+        }
+        #graph { width: 100%; height: 100%; }
+
+        .kg-empty {
+            position: absolute;
+            inset: 50%;
+            z-index: 4;
+            width: 320px;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #64748b;
+        }
+        .kg-empty h2 { color: var(--ink); font-size: 1.15rem; font-weight: 740; margin-bottom: 8px; }
+        .kg-empty a { color: var(--cobalt); }
+        .kg-loading {
+            position: absolute;
+            inset: 50%;
+            z-index: 4;
+            transform: translate(-50%, -50%);
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* ---- 右侧详情面板 ---- */
+        .kg-panel-right {
+            border-left: 1px solid var(--line);
+            background: rgba(255, 253, 248, .96);
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+        .kg-detail-placeholder {
+            color: #64748b;
+            font-size: .9rem;
+            text-align: center;
+            margin-top: 60px;
+            line-height: 1.6;
+        }
+        .kg-node-badge {
+            display: inline-flex;
+            margin-bottom: 12px;
+            padding: 5px 12px;
+            border: 1px solid color-mix(in srgb, var(--node-color, #64748b), #ffffff 48%);
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--node-color, #64748b), #ffffff 82%);
+            color: var(--ink);
+            font-size: .8rem;
+            font-weight: 720;
+        }
+        .kg-detail-name { font-size: 1.15rem; font-weight: 760; color: var(--ink); margin-bottom: 16px; word-break: break-all; }
+        .kg-detail-meta { display: grid; gap: 8px; margin: 12px 0 16px; }
+        .kg-detail-meta div {
+            display: grid;
+            gap: 3px;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius);
+            background: #f8fafc;
+        }
+        .kg-detail-meta span { color: #64748b; font-size: .75rem; }
+        .kg-detail-meta strong { color: var(--ink); font-size: .86rem; word-break: break-word; }
+
+        .kg-detail-section h3 { margin: 16px 0 8px; color: var(--ink); font-size: .92rem; font-weight: 720; }
+        .kg-related-list { display: grid; gap: 8px; }
+        .kg-related-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius);
+            background: #f8fafc;
+            font-size: .86rem;
+            cursor: pointer;
+            transition: all .16s ease;
+        }
+        .kg-related-item:hover { background: #eaf1fb; border-color: rgba(36, 87, 214, .32); transform: translateY(-1px); }
+        .kg-related-item .rel-type {
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: .72rem;
+            font-weight: 650;
+            white-space: nowrap;
+            color: #fff;
+        }
+        .kg-related-item .rel-name { color: var(--ink); flex: 1; word-break: break-all; }
+        .kg-related-item .rel-arrow { color: #94a3b8; font-size: .82rem; }
+
+        .kg-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+        .kg-actions button:first-child { background: var(--cobalt); border-color: var(--cobalt); color: #fff; }
+        .kg-actions button:first-child:hover { background: var(--cobalt-2); }
+        .kg-actions button {
+            border: 1px solid #cbd5e1;
+            border-radius: var(--radius);
+            background: #f8fafc;
+            color: #334155;
+            padding: 8px 16px;
+            font-size: .86rem;
+            font-weight: 650;
+            cursor: pointer;
+            transition: all .16s ease;
+        }
+        .kg-actions button:hover { background: #eaf1fb; border-color: rgba(36, 87, 214, .32); color: var(--cobalt); transform: translateY(-1px); }
+
+        /* vis.js 节点字体颜色覆盖（浅色背景用深色字） */
+        .vis-tooltip { border-radius: var(--radius) !important; box-shadow: var(--shadow) !important; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>企业技术文档智能问答系统</h1>
+        <div>
+            <a href="/static/import.html">知识导入</a>
+            <a href="/static/chat.html">智能问答</a>
+            <a href="/static/graph.html" class="active">知识图谱</a>
+        </div>
+    </nav>
+
+    <div class="kg-shell">
+        <!-- 左侧控制面板 -->
+        <aside class="kg-panel-left">
+            <div class="kg-panel-header">
+                <p class="kicker">Knowledge Graph</p>
+                <h2>知识图谱</h2>
+                <p>展示技术文档中的实体关系网络，支持搜索、筛选和节点详情查看。</p>
+            </div>
+
+            <div class="kg-section">
+                <h3>筛选控制</h3>
+                <label>产品筛选</label>
+                <select id="item-filter" onchange="loadGraph()">
+                    <option value="">全部产品</option>
+                </select>
+                <label>实体类型</label>
+                <select id="type-filter" onchange="applyFilters()">
+                    <option value="">全部类型</option>
+                </select>
+            </div>
+
+            <div class="kg-section">
+                <h3>视图操作</h3>
+                <div class="kg-btn-row">
+                    <button class="kg-btn" onclick="fitGraph()">重置视图</button>
+                    <button class="kg-btn" onclick="runLayout()">重新布局</button>
+                </div>
+            </div>
+
+            <div class="kg-section">
+                <h3>实体图例</h3>
+                <div class="kg-legend" id="legend"></div>
+            </div>
+
+            <div class="kg-section">
+                <h3>关系图例</h3>
+                <div class="kg-legend" id="edge-legend"></div>
+            </div>
+        </aside>
+
+        <!-- 中间画布 -->
+        <section class="kg-stage">
+            <div class="kg-toolbar">
+                <div class="kg-search">
+                    <input id="graph-search" placeholder="搜索实体名称..." oninput="applyFilters()">
+                </div>
+                <select id="type-filter-top" onchange="syncTypeFilter(this.value)">
+                    <option value="">全部类型</option>
+                </select>
+                <button class="kg-tool-btn" onclick="fitGraph()">重置</button>
+                <button class="kg-tool-btn" onclick="runLayout()">布局</button>
+            </div>
+            <div id="graph-canvas">
+                <div id="graph"></div>
+                <div class="kg-loading" id="kg-loading">正在加载图谱...</div>
+                <div class="kg-empty" id="kg-empty" style="display:none">
+                    <h2>暂无图谱数据</h2>
+                    <p>请先在 <a href="/static/import.html">知识导入</a> 页面导入文档</p>
+                </div>
+            </div>
+            <div class="kg-stats">
+                <span><strong id="node-count">0</strong> 实体</span>
+                <span><strong id="edge-count">0</strong> 关系</span>
+                <span id="kg-status">加载中...</span>
+            </div>
+        </section>
+
+        <!-- 右侧详情面板 -->
+        <aside class="kg-panel-right">
+            <div class="kg-panel-header">
+                <p class="kicker">Inspector</p>
+                <h2>节点详情</h2>
+                <p>点击画布中的节点查看来源和关联关系。</p>
+            </div>
+            <div class="kg-detail-placeholder" id="detail-placeholder">
+                点击画布中的节点查看详情和关联关系
+            </div>
+            <div id="node-detail" style="display:none; padding: 0 20px 20px;"></div>
+        </aside>
+    </div>
+
+    <script src="/static/vendor/vis-network.min.js"></script>
+    <script>
+        let network = null;
+        let allNodes = [];
+        let allEdges = [];
+        let selectedNode = null;
+        const highlightedNodeIds = new Set();
+
+        const TYPE_COLORS = {
+            'Device':    '#ef4444',
+            'Part':      '#3b82f6',
+            'Operation': '#22c55e',
+            'Step':      '#f59e0b',
+            'Warning':   '#ec4899',
+            'Condition': '#a855f7',
+            'Tool':      '#14b8a6',
+            'User':       '#ef4444',
+            'Project':    '#f59e0b',
+            'Tech':       '#3b82f6',
+            'Preference': '#22c55e',
+            'Constraint': '#ec4899',
+            'Lesson':     '#a855f7',
+            'Goal':       '#14b8a6',
+            'Session':    '#f97316',
+            'Topic':      '#eab308',
+            'Concept':    '#06b6d4',
+            'Fact':       '#10b981',
+            'Character':  '#d946ef',
+            'Location':   '#0ea5e9',
+            'Event':      '#84cc16',
+            'Plot':       '#f472b6',
+            'Item':       '#78716c',
+            'Unknown':   '#64748b',
+        };
+        const EDGE_COLORS = {
+            'HAS_OPERATION': '#22c55e',
+            'HAS_PART':      '#3b82f6',
+            'HAS_STEP':      '#f59e0b',
+            'USES_TOOL':     '#14b8a6',
+            'HAS_WARNING':   '#ec4899',
+            'NEXT_STEP':     '#f97316',
+            'AFFECTS':       '#a855f7',
+            'REQUIRES':      '#6366f1',
+            'RELATED_TO':    '#94a3b8',
+            'WORKS_ON':      '#ef4444',
+            'PREFERS':       '#22c55e',
+            'CONSTRAINED_BY':'#ec4899',
+            'PURSUES':       '#14b8a6',
+            'USES':          '#3b82f6',
+            'LEARNED':       '#a855f7',
+            'RELATES_TO':    '#94a3b8',
+            'DISCUSSED':     '#f97316',
+            'STUDIED':       '#06b6d4',
+            'PRODUCED':      '#10b981',
+        };
+        const TYPE_LABELS_CN = {
+            'Device': '设备', 'Part': '部件', 'Operation': '操作',
+            'Step': '步骤', 'Warning': '警告', 'Condition': '条件',
+            'Tool': '工具', 'Unknown': '其他',
+            'User': '用户', 'Project': '项目', 'Tech': '技术',
+            'Preference': '偏好', 'Constraint': '约束', 'Lesson': '教训', 'Goal': '目标',
+            'Session': '对话', 'Topic': '主题', 'Concept': '概念',
+            'Fact': '产出',
+        };
+
+        function initLegend() {
+            document.getElementById('legend').innerHTML = Object.entries(TYPE_COLORS).map(([type, color]) =>
+                `<div class="kg-legend-item"><span class="kg-legend-dot" style="background:${color}"></span>${TYPE_LABELS_CN[type] || type}</div>`
+            ).join('');
+            document.getElementById('edge-legend').innerHTML = Object.entries(EDGE_COLORS).map(([type, color]) =>
+                `<div class="kg-legend-item"><span class="kg-legend-dot" style="background:${color}"></span>${type}</div>`
+            ).join('');
+        }
+
+        async function loadItems() {
+            try {
+                const resp = await fetch('/graph/items');
+                const data = await resp.json();
+                const select = document.getElementById('item-filter');
+                (data.items || []).forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item; opt.textContent = item;
+                    select.appendChild(opt);
+                });
+            } catch (e) { console.error('加载产品列表失败:', e); }
+        }
+
+        async function loadGraph() {
+            const itemName = document.getElementById('item-filter').value;
+            const url = itemName ? `/graph?item_name=${encodeURIComponent(itemName)}` : '/graph';
+            document.getElementById('kg-status').textContent = '加载中...';
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
+                allNodes = data.nodes || [];
+                allEdges = data.edges || [];
+                updateTypeFilter(allNodes);
+                renderGraph();
+                document.getElementById('kg-status').textContent = '已加载';
+            } catch (e) {
+                console.error('加载图谱失败:', e);
+                document.getElementById('kg-status').textContent = '加载失败';
+            }
+        }
+
+        function updateTypeFilter(nodes) {
+            const types = new Set();
+            nodes.forEach(n => types.add((n.types && n.types[0]) || 'Unknown'));
+            const opts = '<option value="">全部类型</option>' +
+                Array.from(types).sort().map(t => `<option value="${t}">${TYPE_LABELS_CN[t] || t}</option>`).join('');
+            document.getElementById('type-filter').innerHTML = opts;
+            document.getElementById('type-filter-top').innerHTML = opts;
+        }
+
+        function syncTypeFilter(val) {
+            document.getElementById('type-filter').value = val;
+            applyFilters();
+        }
+
+        function renderGraph() {
+            const container = document.getElementById('graph');
+            document.getElementById('kg-loading').style.display = 'none';
+
+            if (!allNodes.length) {
+                document.getElementById('kg-empty').style.display = 'block';
+                container.innerHTML = '';
+                document.getElementById('node-count').textContent = '0';
+                document.getElementById('edge-count').textContent = '0';
+                return;
+            }
+            document.getElementById('kg-empty').style.display = 'none';
+
+            // vis DataSet 要求 id 唯一：不同产品可能抽出同名实体，按名称去重
+            const seenNames = new Set();
+            allNodes = allNodes.filter(n => {
+                if (!n.name || seenNames.has(n.name)) return false;
+                seenNames.add(n.name);
+                return true;
+            });
+
+            const nodeIds = new Set(allNodes.map(n => n.name));
+
+            // 统计每个节点的关联度，用于按度数缩放节点大小
+            const degree = {};
+            allEdges.forEach(e => {
+                if (nodeIds.has(e.source)) degree[e.source] = (degree[e.source] || 0) + 1;
+                if (nodeIds.has(e.target)) degree[e.target] = (degree[e.target] || 0) + 1;
+            });
+
+            const visNodes = allNodes.map(n => {
+                const type = (n.types && n.types[0]) || 'Unknown';
+                const color = TYPE_COLORS[type] || TYPE_COLORS['Unknown'];
+                const d = degree[n.name] || 0;
+                // 基础大小按关联度递增，hub 节点更醒目
+                const size = (type === 'Device' || type === 'User' ? 26 : 17) + Math.min(d, 8) * 1.6;
+                return {
+                    id: n.name,
+                    label: n.name,
+                    color: {
+                        background: color,
+                        border: '#ffffff',
+                        highlight: { background: color, border: '#1e3a5f' },
+                        hover: { background: color, border: '#1e3a5f' },
+                    },
+                    font: { color: '#1e293b', size: 14, face: 'Inter, system-ui', strokeWidth: 3, strokeColor: 'rgba(248,251,255,.85)' },
+                    shape: 'dot',
+                    size,
+                    borderWidth: 3,
+                    _type: type,
+                    _item: n.item_name || '',
+                };
+            });
+
+            const visEdges = allEdges
+                .filter(e => nodeIds.has(e.source) && nodeIds.has(e.target))
+                .map((e, i) => ({
+                    id: `e${i}`,
+                    from: e.source, to: e.target,
+                    label: e.type,
+                    arrows: 'to',
+                    color: { color: EDGE_COLORS[e.type] || '#94a3b8', opacity: 0.65, highlight: '#2457d6' },
+                    font: { size: 11, color: '#475569', strokeWidth: 3, strokeColor: 'rgba(248,251,255,.9)' },
+                    smooth: { type: 'curvedCW', roundness: 0.15 },
+                    _type: e.type,
+                }));
+
+            document.getElementById('node-count').textContent = visNodes.length;
+            document.getElementById('edge-count').textContent = visEdges.length;
+
+            if (network) network.destroy();
+            network = new vis.Network(container, {
+                nodes: new vis.DataSet(visNodes),
+                edges: new vis.DataSet(visEdges),
+            }, {
+                physics: {
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: { gravitationalConstant: -50, centralGravity: 0.01, springLength: 100, springConstant: 0.03 },
+                    stabilization: { iterations: 120, updateInterval: 20 },
+                },
+                interaction: { hover: true, tooltipDelay: 200, hideEdgesOnDrag: true },
+                nodes: { borderWidth: 3, shadow: { enabled: true, size: 8, color: 'rgba(36,87,214,0.18)' } },
+                edges: { width: 2.2, selectionWidth: 3.5, hoverWidth: 3 },
+            });
+
+            network.on('click', (params) => {
+                if (params.nodes.length > 0) selectNode(params.nodes[0]);
+                else clearSelection();
+            });
+
+            network.once('stabilizationIterationsDone', () => {
+                network.fit({ animation: { duration: 500 } });
+            });
+        }
+
+        function selectNode(nodeId) {
+            selectedNode = allNodes.find(n => n.name === nodeId);
+            if (!selectedNode) return;
+            highlightedNodeIds.clear();
+            highlightedNodeIds.add(nodeId);
+            allEdges.filter(e => e.source === nodeId || e.target === nodeId).forEach(e => {
+                highlightedNodeIds.add(e.source);
+                highlightedNodeIds.add(e.target);
+            });
+            updateHighlight();
+            renderDetail(nodeId);
+        }
+
+        function updateHighlight() {
+            if (!network) return;
+            const nodes = network.body.data.nodes.get();
+            const edges = network.body.data.edges.get();
+            network.body.data.nodes.update(nodes.map(n => ({
+                id: n.id,
+                opacity: highlightedNodeIds.size > 0 && !highlightedNodeIds.has(n.id) ? 0.2 : 1.0,
+            })));
+            network.body.data.edges.update(edges.map(e => ({
+                id: e.id,
+                opacity: highlightedNodeIds.size > 0 && !(highlightedNodeIds.has(e.from) && highlightedNodeIds.has(e.to)) ? 0.12 : 0.65,
+                width: highlightedNodeIds.has(e.from) && highlightedNodeIds.has(e.to) ? 3.8 : 2.2,
+            })));
+        }
+
+        function renderDetail(nodeId) {
+            const detailEl = document.getElementById('node-detail');
+            document.getElementById('detail-placeholder').style.display = 'none';
+            detailEl.style.display = 'block';
+
+            const type = (selectedNode.types && selectedNode.types[0]) || 'Unknown';
+            const color = TYPE_COLORS[type] || TYPE_COLORS['Unknown'];
+            const related = allEdges.filter(e => e.source === nodeId || e.target === nodeId);
+
+            const relatedHTML = related.length ? related.map(edge => {
+                const otherId = edge.source === nodeId ? edge.target : edge.source;
+                const otherNode = allNodes.find(n => n.name === otherId);
+                const otherType = otherNode ? ((otherNode.types && otherNode.types[0]) || 'Unknown') : 'Unknown';
+                const otherColor = TYPE_COLORS[otherType] || TYPE_COLORS['Unknown'];
+                const edgeColor = EDGE_COLORS[edge.type] || '#94a3b8';
+                const direction = edge.source === nodeId ? '→' : '←';
+                return `<div class="kg-related-item" onclick="selectNode('${otherId.replace(/'/g, "\\'")}')">
+                    <span class="rel-type" style="background:${edgeColor}">${edge.type}</span>
+                    <span class="rel-arrow">${direction}</span>
+                    <span class="rel-name" style="color:${otherColor}">${otherId}</span>
+                </div>`;
+            }).join('') : '<p style="color:#64748b;font-size:.86rem">暂无关联关系</p>';
+
+            detailEl.innerHTML = `
+                <div class="kg-node-badge" style="--node-color:${color}">${TYPE_LABELS_CN[type] || type}</div>
+                <div class="kg-detail-name">${escapeHtml(selectedNode.name)}</div>
+                <div class="kg-detail-meta">
+                    <div><span>产品</span><strong>${escapeHtml(selectedNode.item_name || '-')}</strong></div>
+                    <div><span>实体类型</span><strong>${TYPE_LABELS_CN[type] || type}</strong></div>
+                    <div><span>关联数</span><strong>${related.length}</strong></div>
+                </div>
+                <div class="kg-detail-section">
+                    <h3>关联关系</h3>
+                    <div class="kg-related-list">${relatedHTML}</div>
+                </div>
+                <div class="kg-actions">
+                    <button onclick="focusNode('${selectedNode.name.replace(/'/g, "\\'")}')">聚焦节点</button>
+                    <button onclick="clearSelection()">取消选择</button>
+                </div>
+            `;
+        }
+
+        function focusNode(nodeId) { if (network) network.focus(nodeId, { scale: 1.5, animation: { duration: 500 } }); }
+
+        function clearSelection() {
+            selectedNode = null;
+            highlightedNodeIds.clear();
+            updateHighlight();
+            document.getElementById('detail-placeholder').style.display = 'block';
+            document.getElementById('node-detail').style.display = 'none';
+        }
+
+        function applyFilters() {
+            if (!network) return;
+            const query = document.getElementById('graph-search').value.trim().toLowerCase();
+            const typeFilter = document.getElementById('type-filter').value;
+            const nodes = network.body.data.nodes.get();
+            network.body.data.nodes.update(nodes.map(n => ({
+                id: n.id,
+                hidden: !((!query || n.id.toLowerCase().includes(query)) && (!typeFilter || n._type === typeFilter)),
+            })));
+            const edges = network.body.data.edges.get();
+            network.body.data.edges.update(edges.map(e => {
+                const sn = nodes.find(n => n.id === e.from);
+                const tn = nodes.find(n => n.id === e.to);
+                return { id: e.id, hidden: (sn && sn.hidden) || (tn && tn.hidden) };
+            }));
+        }
+
+        function fitGraph() { if (network) network.fit({ animation: { duration: 500 } }); }
+        function runLayout() { if (network) { network.setOptions({ physics: { enabled: true } }); network.stabilize(); } }
+
+        function escapeHtml(v) {
+            return String(v || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        initLegend();
+        loadItems().then(() => {
+            // 支持 ?item_name=xxx 直接打开指定产品的图谱视图
+            const param = new URLSearchParams(location.search).get('item_name');
+            if (param) {
+                const select = document.getElementById('item-filter');
+                const match = Array.from(select.options).find(o => o.value === param);
+                if (match) select.value = param;
+            }
+            loadGraph();
+        });
+    </script>
+</body>
+</html>

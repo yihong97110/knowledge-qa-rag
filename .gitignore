@@ -1,0 +1,17 @@
+# 环境与密钥
+.env
+
+# 运行时数据
+data/
+uploads/
+milvus_lite.db/
+milvus_demo.db/
+*.pkl
+
+# Python
+__pycache__/
+*.pyc
+
+# 系统文件
+.DS_Store
+Thumbs.db

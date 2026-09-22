@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识库导入 - 企业技术文档智能问答系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .navbar h1 { font-size: 20px; font-weight: 600; }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .navbar a:hover { background: rgba(255,255,255,0.15); }
+        .navbar a.active { background: rgba(255,255,255,0.2); font-weight: 600; }
+        .container { max-width: 900px; margin: 32px auto; padding: 0 20px; }
+
+        /* 上传区域 */
+        .upload-card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        .upload-card h2 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #1a73e8;
+        }
+        .upload-card p.desc {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 24px;
+        }
+        .drop-zone {
+            border: 2px dashed #d0d5dd;
+            border-radius: 10px;
+            padding: 48px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #fafbfc;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #1a73e8;
+            background: #e8f0fe;
+        }
+        .drop-zone .icon {
+            font-size: 48px;
+            color: #d0d5dd;
+            margin-bottom: 12px;
+        }
+        .drop-zone .text {
+            font-size: 15px;
+            color: #666;
+        }
+        .drop-zone .text strong { color: #1a73e8; }
+        .drop-zone .hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+        }
+        #file-input { display: none; }
+
+        /* 已选文件列表 */
+        .file-list { margin-top: 20px; }
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .file-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-item .size { color: #999; margin: 0 12px; white-space: nowrap; }
+        .file-item .remove {
+            color: #e53935;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px 8px;
+        }
+        .file-item .remove:hover { background: #ffebee; border-radius: 4px; }
+
+        /* 上传按钮 */
+        .btn-upload {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: opacity 0.2s;
+        }
+        .btn-upload:hover { opacity: 0.9; }
+        .btn-upload:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* 任务进度 */
+        .task-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+            display: none;
+        }
+        .task-card.show { display: block; }
+        .task-card .task-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .task-card .task-name { font-size: 15px; font-weight: 600; }
+        .task-card .task-status {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .status-pending { background: #fff3e0; color: #e65100; }
+        .status-processing { background: #e3f2fd; color: #1565c0; }
+        .status-completed { background: #e8f5e9; color: #2e7d32; }
+        .status-failed { background: #ffebee; color: #c62828; }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1a73e8, #42a5f5);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+        .progress-text {
+            font-size: 13px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+        .task-message {
+            font-size: 13px;
+            color: #555;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #f5f5f5;
+            border-radius: 6px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>企业技术文档智能问答系统</h1>
+        <div>
+            <a href="/static/import.html" class="active">知识导入</a>
+            <a href="/static/chat.html">智能问答</a>
+            <a href="/static/graph.html">知识图谱</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 上传区域 -->
+        <div class="upload-card">
+            <h2>文档导入</h2>
+            <p class="desc">上传技术文档（PDF / Markdown），系统将自动解析、切分、向量化并构建知识图谱。</p>
+
+            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                <div class="icon">+</div>
+                <div class="text">点击或拖拽文件到此处上传，支持 <strong>PDF</strong> 和 <strong>Markdown</strong> 文件</div>
+                <div class="hint">可同时选择多个文件</div>
+            </div>
+            <input type="file" id="file-input" multiple accept=".pdf,.md,.markdown,.txt">
+
+            <div class="file-list" id="file-list"></div>
+
+            <button class="btn-upload" id="btn-upload" disabled onclick="uploadFiles()">
+                开始导入
+            </button>
+        </div>
+
+        <!-- 任务列表 -->
+        <div id="task-list"></div>
+        <div class="empty-state" id="empty-state">暂无导入任务</div>
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        let pollingTimers = {};
+
+        // 文件选择
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            handleFiles(e.target.files);
+        });
+
+        // 拖拽
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', function(e) {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        function handleFiles(files) {
+            for (let file of files) {
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (['pdf', 'md', 'markdown', 'txt'].includes(ext)) {
+                    selectedFiles.push(file);
+                }
+            }
+            renderFileList();
+        }
+
+        function renderFileList() {
+            const list = document.getElementById('file-list');
+            const btn = document.getElementById('btn-upload');
+            list.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <span class="name">${file.name}</span>
+                    <span class="size">${formatSize(file.size)}</span>
+                    <span class="remove" onclick="removeFile(${index})">&times;</span>
+                `;
+                list.appendChild(item);
+            });
+            btn.disabled = selectedFiles.length === 0;
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        // 上传文件
+        async function uploadFiles() {
+            const btn = document.getElementById('btn-upload');
+            btn.disabled = true;
+            btn.textContent = '上传中...';
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => formData.append('files', file));
+
+            try {
+                const response = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (data.task_ids) {
+                    data.task_ids.forEach(taskId => {
+                        const fileName = selectedFiles.find((_, i) => i === 0)?.name || '未知文件';
+                        addTaskCard(taskId, fileName);
+                        pollTaskStatus(taskId);
+                    });
+                    selectedFiles = [];
+                    renderFileList();
+                    document.getElementById('empty-state').style.display = 'none';
+                }
+            } catch (err) {
+                alert('上传失败: ' + err.message);
+            }
+
+            btn.disabled = false;
+            btn.textContent = '开始导入';
+        }
+
+        // 添加任务卡片
+        function addTaskCard(taskId, fileName) {
+            const taskList = document.getElementById('task-list');
+            const card = document.createElement('div');
+            card.className = 'task-card show';
+            card.id = `task-${taskId}`;
+            card.innerHTML = `
+                <div class="task-header">
+                    <span class="task-name">${fileName}</span>
+                    <span class="task-status status-pending" id="status-${taskId}">待处理</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-${taskId}" style="width: 0%"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progress-text-${taskId}">0%</span>
+                    <span id="task-id-${taskId}" style="color:#bbb;font-size:12px">${taskId}</span>
+                </div>
+                <div class="task-message" id="message-${taskId}">等待处理...</div>
+            `;
+            taskList.appendChild(card);
+        }
+
+        // 轮询任务状态
+        function pollTaskStatus(taskId) {
+            pollingTimers[taskId] = setInterval(async () => {
+                try {
+                    const response = await fetch(`/status/${taskId}`);
+                    const data = await response.json();
+                    updateTaskCard(taskId, data);
+
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(pollingTimers[taskId]);
+                        delete pollingTimers[taskId];
+                    }
+                } catch (err) {
+                    console.error('轮询失败:', err);
+                }
+            }, 2000);
+        }
+
+        function updateTaskCard(taskId, data) {
+            const statusEl = document.getElementById(`status-${taskId}`);
+            const progressEl = document.getElementById(`progress-${taskId}`);
+            const progressTextEl = document.getElementById(`progress-text-${taskId}`);
+            const messageEl = document.getElementById(`message-${taskId}`);
+
+            const statusMap = {
+                pending: { text: '待处理', class: 'status-pending' },
+                processing: { text: '处理中', class: 'status-processing' },
+                completed: { text: '已完成', class: 'status-completed' },
+                failed: { text: '失败', class: 'status-failed' }
+            };
+
+            const s = statusMap[data.status] || statusMap.pending;
+            statusEl.textContent = s.text;
+            statusEl.className = `task-status ${s.class}`;
+
+            const progress = data.progress || 0;
+            progressEl.style.width = progress + '%';
+            progressTextEl.textContent = progress + '%';
+
+            if (data.message) {
+                messageEl.textContent = data.message;
+            }
+        }
+    </script>
+</body>
+</html>
