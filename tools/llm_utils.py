@@ -26,10 +26,22 @@ def get_llm() -> OpenAI:
     if _llm_client is None:
         settings = get_settings()
         _llm_client = OpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_api_base,
+            api_key=settings.llm_api_key,
+            base_url=settings.llm_api_base,
         )
     return _llm_client
+
+
+def _extra_body() -> dict:
+    """构造额外请求体。
+
+    火山方舟 DeepSeek 系列默认开启深度思考（thinking），会显著增加
+    首字延迟与 token 消耗；LLM_DISABLE_THINKING=true 时在请求层关闭。
+    """
+    settings = get_settings()
+    if settings.llm_disable_thinking:
+        return {"thinking": {"type": "disabled"}}
+    return {}
 
 
 def chat(
@@ -56,6 +68,7 @@ def chat(
         messages=messages,
         temperature=temperature if temperature is not None else settings.llm_temperature,
         max_tokens=max_tokens,
+        extra_body=_extra_body(),
     )
     return response.choices[0].message.content or ""
 
@@ -90,6 +103,7 @@ def chat_stream(
         temperature=temperature if temperature is not None else settings.llm_temperature,
         max_tokens=max_tokens,
         stream=True,
+        extra_body=_extra_body(),
     )
     # 迭代 choices[0].delta.content，逐 token 产出
     for chunk in stream:
@@ -146,6 +160,7 @@ def chat_json(
             temperature=temperature,
             seed=seed,
             response_format={"type": "json_object"},
+            extra_body=_extra_body(),
         )
     except Exception:
         response = client.chat.completions.create(
@@ -153,6 +168,7 @@ def chat_json(
             messages=prepared,
             temperature=temperature,
             seed=seed,
+            extra_body=_extra_body(),
         )
     content = response.choices[0].message.content or ""
 

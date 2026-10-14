@@ -13,9 +13,12 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 @dataclass
 class Settings:
-    # LLM
+    # LLM（对话生成专用连接，可与 Embedding/Reranker 分属不同厂商）
     openai_api_key: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
     openai_api_base: str = field(default_factory=lambda: os.getenv("OPENAI_API_BASE", ""))
+    llm_api_key: str = field(default_factory=lambda: os.getenv("LLM_API_KEY", "") or os.getenv("OPENAI_API_KEY", ""))
+    llm_api_base: str = field(default_factory=lambda: os.getenv("LLM_API_BASE", "") or os.getenv("OPENAI_API_BASE", ""))
+    llm_disable_thinking: bool = field(default_factory=lambda: os.getenv("LLM_DISABLE_THINKING", "false").strip().lower() in ("1", "true", "yes"))
     llm_model: str = field(default_factory=lambda: os.getenv("LLM_DEFAULT_MODEL", "qwen-flash"))
     llm_temperature: float = field(default_factory=lambda: float(os.getenv("LLM_DEFAULT_TEMPERATURE", "0.1")))
     item_model: str = field(default_factory=lambda: os.getenv("ITEM_MODEL", "qwen-flash"))
