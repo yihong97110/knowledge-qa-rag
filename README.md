@@ -1,4 +1,4 @@
-#企业技术文档智能问答系统（RAG + GraphRAG）
+# 企业技术文档智能问答系统（RAG + GraphRAG）
 
 基于 RAG + GraphRAG 混合架构的企业文档问答系统：四路并行检索 → RRF 名次融合 → 重排序 → SSE 流式生成，并内置完整评估闭环（recall@k / MRR / 分路归因 / LLM-as-judge 幻觉率）。
 
